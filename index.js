@@ -4,6 +4,7 @@ const { spawnSync } = require("child_process");
 const ProgressBar = require("cli-progress");
 const readline = require("readline");
 const { URL } = require("url");
+const path = require("path");
 
 // Create a readline interface
 const rl = readline.createInterface({
@@ -25,7 +26,7 @@ async function downloadSegmentsAndCombine() {
     const playlistUrl = await promptUser("Enter the playlist URL: ");
     let outputFileName = await promptUser("Enter the output file name: ");
 
-    outputFileName = `./${outputFileName}.mp4`;
+    outputFileName = `./outputs/${outputFileName}.mp4`;
 
     // Parse the playlist URL to get the hostname
     const parsedUrl = new URL(playlistUrl);
@@ -38,6 +39,10 @@ async function downloadSegmentsAndCombine() {
     if (!segmentUrls) {
       console.log("No segment URLs found in the playlist.");
       return;
+    }
+
+    if (!fs.existsSync(".segments")) {
+      fs.mkdirSync(".segments");
     }
 
     const downloadedSegments = [];
@@ -58,7 +63,10 @@ async function downloadSegmentsAndCombine() {
         responseType: "arraybuffer",
       });
       const segmentData = segmentResponse.data;
-      const segmentFileName = segmentUrl.split("/").pop();
+      const segmentFileName = path.join(
+        ".segments",
+        segmentUrl.split("/").pop()
+      );
       fs.writeFileSync(segmentFileName, segmentData);
       downloadedSegments.push(segmentFileName);
       progressBar.increment();
@@ -89,6 +97,10 @@ async function downloadSegmentsAndCombine() {
     // Cleanup downloaded files and concat.txt
     downloadedSegments.forEach((segment) => fs.unlinkSync(segment));
     fs.unlinkSync("concat.txt");
+
+    if (!fs.existsSync("outputs")) {
+      fs.mkdirSync("outputs");
+    }
   } catch (error) {
     console.error("Error:", error.message);
   } finally {
